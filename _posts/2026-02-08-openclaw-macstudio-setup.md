@@ -24,8 +24,8 @@ Telegram/Slack에서 AI 어시스턴트로 맥을 제어하는 전체 과정을 
 
 | 장치 | 역할 | IP | 비고 |
 |------|------|-----|-----|
-| Raspberry Pi 5 (8GB) | OpenClaw Gateway | 192.168.0.10 | 64-bit OS |
-| Mac Studio | OpenClaw Node | 192.168.0.100 | Apple Silicon |
+| Raspberry Pi 5 (8GB) | OpenClaw Gateway | 192.168.x.10 | 64-bit OS |
+| Mac Studio | OpenClaw Node | 192.168.x.100 | Apple Silicon |
 
 ---
 
@@ -91,7 +91,7 @@ done
 ### 1-4. SSH 접속 및 업데이트
 
 ```bash
-ssh 사용자명@192.168.0.10
+ssh 사용자명@192.168.x.10
 
 # 시스템 업데이트
 sudo apt update && sudo apt full-upgrade -y
@@ -253,7 +253,7 @@ openclaw pairing approve slack <CODE>
 npm install -g openclaw
 
 # Gateway 주소 설정
-openclaw config set gateway.remote.url ws://192.168.0.10:18789
+openclaw config set gateway.remote.url ws://192.168.x.10:18789
 
 # 노드 서비스 설치
 openclaw node install --display-name "MacStudio"
@@ -304,7 +304,7 @@ openclaw approvals list --node MacStudio
 
 ```bash
 ifconfig en0 | grep ether
-# 결과: ether 9c:76:0e:48:f3:dd
+# 결과: ether xx:xx:xx:xx:xx:xx
 ```
 
 ### 4-3. Gateway에서 WoL 도구 설치
@@ -316,7 +316,7 @@ sudo apt install wakeonlan
 ### 4-4. 깨우기 명령
 
 ```bash
-wakeonlan 9c:76:0e:48:f3:dd
+wakeonlan xx:xx:xx:xx:xx:xx
 ```
 
 ### 4-5. FileVault와 WoL
@@ -348,13 +348,13 @@ wakeonlan 9c:76:0e:48:f3:dd
 ssh-keygen -t ed25519
 
 # MacStudio에 공개키 복사
-ssh-copy-id hyangmin@192.168.0.100
+ssh-copy-id hyangmin@192.168.x.100
 ```
 
 ### 5-3. 연결 테스트
 
 ```bash
-ssh hyangmin@192.168.0.100 "echo SSH OK"
+ssh hyangmin@192.168.x.100 "echo SSH OK"
 ```
 
 ### SSH vs Node 비교
