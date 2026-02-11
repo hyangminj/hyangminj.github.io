@@ -15,8 +15,6 @@ tags: [web, javascript, touch, mobile, claude-code]
 
 ## Finger Picker란?
 
-![Finger Picker](/assets/img/finger-picker-demo.gif)
-
 Chwazi와 똑같은 기능을 하는 웹앱입니다:
 
 1. 📱 여러 명이 화면에 손가락을 올립니다
