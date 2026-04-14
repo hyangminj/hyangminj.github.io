@@ -1,5 +1,5 @@
 ---
-title: "dev 환경에서 프로덕션급 테스트를 위한 fake 데이터 생성기 — loadforge"
+title: "dev 환경에서 프로덕션급 테스트를 위한 fake 데이터 생성기 — ddl2data"
 date: 2026-04-01
 categories: [projects]
 tags: [python, data-engineering, cli, testing, open-source]
@@ -20,15 +20,15 @@ tags: [python, data-engineering, cli, testing, open-source]
 
 이런 도구가 있으면 좋겠다고 몇 년간 생각만 하다가, 결국 직접 만들었습니다.
 
-## loadforge란
+## ddl2data란
 
-[loadforge](https://pypi.org/project/loadforge/)는 DB 스키마를 읽어서 **현실적인 fake 데이터를 대량 생성**하는 Python CLI 도구입니다.
+[ddl2data](https://pypi.org/project/ddl2data/)는 DB 스키마를 읽어서 **현실적인 fake 데이터를 대량 생성**하는 Python CLI 도구입니다.
 
 dev 환경, 스테이징, CI 파이프라인에서 프로덕션 수준의 테스트를 돌리기 위한 데이터를 만들어줍니다. 서비스 기능 테스트든, 데이터 파이프라인 검증이든, 부하 테스트든 용도에 맞게 쓸 수 있습니다.
 
 ```bash
-pipx install loadforge
-datagen --ddl schema.sql --rows 10000 --out json --output-path test_data.json
+pipx install ddl2data
+ddl2data --ddl schema.sql --rows 10000 --out json --output-path test_data.json
 ```
 
 스키마만 넣으면 테이블 간 관계를 분석해서, 알아서 순서대로 데이터를 채워줍니다.
@@ -40,7 +40,7 @@ datagen --ddl schema.sql --rows 10000 --out json --output-path test_data.json
 새로운 API를 개발했는데, 빈 DB로는 제대로 테스트가 안 됩니다. 유저 1만 명, 주문 5만 건, 이벤트 20만 건 — 이런 규모의 데이터가 들어있는 dev DB가 필요합니다.
 
 ```bash
-datagen --ddl schema.sql \
+ddl2data --ddl schema.sql \
   --table-rows users=10000,orders=50000,events=200000 \
   --out postgres --output-path seed.sql
 ```
@@ -49,7 +49,7 @@ datagen --ddl schema.sql \
 
 ### 데이터 파이프라인 검증
 
-ETL이나 ELT 파이프라인이 제대로 동작하는지 확인하려면, 다양한 패턴의 입력 데이터가 필요합니다. loadforge는 20행마다 엣지 케이스를 자동으로 섞어줍니다:
+ETL이나 ELT 파이프라인이 제대로 동작하는지 확인하려면, 다양한 패턴의 입력 데이터가 필요합니다. ddl2data는 20행마다 엣지 케이스를 자동으로 섞어줍니다:
 
 - 특수문자, 아주 긴 문자열, 경계값
 - 0, 음수, 매우 큰 숫자
@@ -62,7 +62,7 @@ ETL이나 ELT 파이프라인이 제대로 동작하는지 확인하려면, 다�
 서비스가 대량 데이터를 잘 처리하는지 확인하고 싶을 때, Polars 엔진으로 빠르게 대량 생성할 수 있습니다:
 
 ```bash
-datagen --ddl schema.sql --rows 1000000 \
+ddl2data --ddl schema.sql --rows 1000000 \
   --engine polars --out csv --output-path ./load_test_data
 ```
 
@@ -71,7 +71,7 @@ datagen --ddl schema.sql --rows 1000000 \
 생성한 데이터를 파일로 뽑지 않고 바로 dev DB에 넣을 수도 있습니다:
 
 ```bash
-datagen --ddl schema.sql --rows 10000 \
+ddl2data --ddl schema.sql --rows 10000 \
   --insert --db-url postgresql+psycopg://user:pass@localhost:5432/devdb
 ```
 
@@ -82,7 +82,7 @@ datagen --ddl schema.sql --rows 10000 \
 `--dist` 옵션으로 컬럼별 분포를 지정할 수 있습니다:
 
 ```bash
-datagen --ddl schema.sql --rows 10000 \
+ddl2data --ddl schema.sql --rows 10000 \
   --dist users.age:normal,mean=33,std=7 \
   --dist orders.amount:pareto,alpha=1.5,xm=1 \
   --dist tier:weighted,premium=10%,standard=70%,free=20% \
@@ -106,7 +106,7 @@ datagen --ddl schema.sql --rows 10000 \
 
 ## 스키마 제약조건 인식
 
-loadforge는 스키마에 정의된 제약조건을 읽고, 그에 맞는 데이터를 생성합니다.
+ddl2data는 스키마에 정의된 제약조건을 읽고, 그에 맞는 데이터를 생성합니다.
 
 ### 테이블 간 참조 관계
 
@@ -142,7 +142,7 @@ UNIQUE 컬럼은 중복 없이, NOT NULL 컬럼은 빈 값 없이 생성됩니�
 DDL 파일이 없어도 됩니다. 이미 돌아가고 있는 DB에서 스키마를 직접 읽어올 수 있습니다:
 
 ```bash
-datagen \
+ddl2data \
   --schema-from-db \
   --db-url postgresql+psycopg://user:pass@localhost:5432/mydb \
   --tables users,orders,events \
@@ -157,13 +157,13 @@ datagen \
 생성된 데이터를 어디서 쓸지에 따라 포맷을 선택할 수 있습니다:
 
 ```bash
-datagen --ddl schema.sql --rows 10000 --out postgres   # PostgreSQL INSERT
-datagen --ddl schema.sql --rows 10000 --out mysql       # MySQL INSERT
-datagen --ddl schema.sql --rows 10000 --out sqlite      # SQLite INSERT
-datagen --ddl schema.sql --rows 10000 --out bigquery    # BigQuery INSERT
-datagen --ddl schema.sql --rows 10000 --out json        # JSON
-datagen --ddl schema.sql --rows 10000 --out csv         # CSV (테이블별 파일)
-datagen --ddl schema.sql --rows 10000 --out parquet     # Parquet
+ddl2data --ddl schema.sql --rows 10000 --out postgres   # PostgreSQL INSERT
+ddl2data --ddl schema.sql --rows 10000 --out mysql       # MySQL INSERT
+ddl2data --ddl schema.sql --rows 10000 --out sqlite      # SQLite INSERT
+ddl2data --ddl schema.sql --rows 10000 --out bigquery    # BigQuery INSERT
+ddl2data --ddl schema.sql --rows 10000 --out json        # JSON
+ddl2data --ddl schema.sql --rows 10000 --out csv         # CSV (테이블별 파일)
+ddl2data --ddl schema.sql --rows 10000 --out parquet     # Parquet
 ```
 
 ## 검증 리포트
@@ -171,7 +171,7 @@ datagen --ddl schema.sql --rows 10000 --out parquet     # Parquet
 생성한 데이터가 실제로 제약조건을 만족하는지 검증하고 리포트를 뽑을 수 있습니다:
 
 ```bash
-datagen --ddl schema.sql --rows 10000 \
+ddl2data --ddl schema.sql --rows 10000 \
   --strict-checks \
   --report-path report.json \
   --out json --output-path data.json
@@ -197,7 +197,7 @@ dist = [
 ```
 
 ```bash
-datagen --config datagen.toml
+ddl2data --config datagen.toml
 ```
 
 `--seed` 옵션으로 동일한 데이터를 반복 생성할 수 있어서, 재현 가능한 테스트에 유용합니다.
@@ -222,13 +222,13 @@ AI가 적절한 옵션 조합을 만들어주기 때문에, 옵션을 외울 필
 
 솔직히 말하면 아직 버그도 많고, 직접 dog fooding 하면서 고쳐나가는 중입니다. 완성된 도구라기보다는 쓰면서 만들어가는 단계에 가깝습니다. 그래도 몇 년간 생각만 했던 걸 결국 만들었고, 실제로 돌아가는 것만으로도 의미가 있다고 생각합니다.
 
-dev 환경에서 프로덕션급 테스트를 하려면 프로덕션급 데이터가 필요합니다. loadforge가 그 간극을 채워줄 수 있으면 좋겠습니다.
+dev 환경에서 프로덕션급 테스트를 하려면 프로덕션급 데이터가 필요합니다. ddl2data가 그 간극을 채워줄 수 있으면 좋겠습니다.
 
 ```bash
-pipx install loadforge
+pipx install ddl2data
 ```
 
-- GitHub: [hyangminj/datagen](https://github.com/hyangminj/datagen)
-- PyPI: [loadforge](https://pypi.org/project/loadforge/)
+- GitHub: [hyangminj/ddl2data](https://github.com/hyangminj/ddl2data)
+- PyPI: [ddl2data](https://pypi.org/project/ddl2data/)
 
 피드백이나 이슈는 GitHub Issues로 남겨주시면 감사하겠습니다.
